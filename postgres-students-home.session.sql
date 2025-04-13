@@ -1,3 +1,4 @@
+-- 30. PostgreSQL. Створення таблиці
 CREATE TABLE students (
     id serial PRIMARY KEY,
     first_name varchar(64) NOT NULL CONSTRAINT check_first_name CHECK(first_name != ''),
@@ -34,6 +35,9 @@ INSERT INTO students(first_name,last_name,birthday,phone_number,grupa,avg_mark,g
 DROP TABLE students;
 
 
+---------------------------------------------------------------------------------
+
+-- 31. PostgreSQL. Вибірка даних
 
 SELECT first_name || ' ' || last_name AS "Full name", EXTRACT(year FROM AGE(birthday)) || '.' || EXTRACT(month FROM AGE(birthday)) AS age
 FROM students
@@ -98,3 +102,122 @@ WHERE departament = 'Super Big Ideias' AND avg_mark >=60 AND EXTRACT(month FROM 
 GROUP BY id
 ORDER BY avg_mark ASC
 LIMIT 1
+
+ALTER TABLE students
+DROP COLUMN avg_mark
+
+
+
+
+---------------------------------------------------------------------------------
+
+-- 32. PostgresSQL. Зв'язки між таблицями
+
+CREATE TABLE courses(
+    id_course serial PRIMARY KEY,
+    title varchar(100) NOT NULL CHECK(title!='') UNIQUE,
+    discription text,
+    study_hours smallint CHECK(study_hours >0)
+)
+
+INSERT INTO courses(title,discription,study_hours) VALUES('Химия','blablabla',10)
+
+INSERT INTO courses(title,discription,study_hours) VALUES
+('Основи програмування', 'blobloblo', 60),
+('Information Technologies', 'blebleble', 45),
+('Phisics', 'blublublu',30),
+('Физкультура', 'bliblibli', 60),
+('Схемотехника' ,'blyblybly', 60),
+('История' ,'tratatatat', 90)
+
+CREATE TABLE Exams(
+    id_stud int REFERENCES students(id),
+    id_course int REFERENCES courses(id_course),
+    mark smallint NOT NULL CHECK(mark >0 AND mark <=100),
+    CONSTRAINT primary_key_exams PRIMARY KEY (id_stud,id_course)
+)
+
+INSERT INTO Exams VALUES(1,1,75)
+
+INSERT INTO Exams VALUES
+(15,1,78),
+(15,2,80),
+(15,3,96),
+(15,4,60),
+(15,5,78),
+(15,6,79),
+(15,7,69)
+--1
+SELECT first_name || ' ' || last_name, title
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+--3
+SELECT first_name || ' ' || last_name AS full_name, title, mark
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+WHERE first_name = 'Joe' AND last_name = 'Doe' AND title = 'High Math'
+--4
+SELECT first_name || ' ' || last_name AS full_name, title, mark
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+WHERE mark <=75 
+ORDER BY mark DESC
+--5
+SELECT first_name || ' ' || last_name AS full_name, title, mark
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+WHERE title = 'Схемотехника' AND mark IS NOT NULL
+--6
+SELECT first_name || ' ' || last_name AS full_name, ROUND(AVG(mark),2) AS avg_mark, COUNT(title)
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+GROUP BY full_name
+--7
+SELECT first_name || ' ' || last_name AS full_name,title, mark
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+WHERE mark > 80
+--8
+SELECT title
+FROM courses LEFT JOIN Exams
+ON courses.id_course = Exams.id_course
+WHERE Exams.id_course IS NULL
+--9
+SELECT first_name || ' ' || last_name AS full_name,birthday
+FROM students
+WHERE birthday = (SELECT birthday FROM students WHERE first_name = 'Anya' AND last_name = 'Manya')
+AND NOT (first_name = 'Anya' AND last_name = 'Manya')
+--10
+SELECT first_name || ' ' || last_name AS full_name, ROUND(AVG(mark),2)
+FROM students JOIN Exams
+ON students.id = Exams.id_stud
+WHERE mark > (SELECT ROUND(AVG(mark),2) FROM students JOIN Exams ON students.id = Exams.id_stud WHERE first_name = 'Anya' AND last_name = 'Manya')
+AND NOT (first_name = 'Anya' AND last_name = 'Manya')
+GROUP BY full_name
+--11
+SELECT title, study_hours
+FROM courses
+WHERE study_hours > (SELECT study_hours FROM courses WHERE title = 'Information Technologies')
+--12
+SELECT first_name || ' ' || last_name AS full_name, title, mark
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course
+WHERE mark > (SELECT MAX(mark) FROM students JOIN Exams ON students.id = Exams.id_stud WHERE first_name = 'Anya' AND last_name = 'Manya')
+--13
+SELECT first_name || ' ' || last_name AS full_name, title, mark,
+CASE 
+    WHEN mark >= 60 THEN 'Задовільно'
+    WHEN mark >= 75 THEN 'Добре'
+    WHEN mark >= 90 THEN 'Відмінно'
+    WHEN mark < 60 THEN 'Грустна =('
+END AS Оценка
+FROM ( SELECT * FROM students JOIN Exams
+ON students.id = Exams.id_stud) AS joinene JOIN courses
+ON joinene.id_course = courses.id_course

@@ -116,7 +116,7 @@ WITH orders_data AS (SELECT o.id,m.id AS menu_id,m.names,otm.quantity FROM menu 
 ON m.id = otm.menu_id
 JOIN orders AS o ON o.id = otm.order_id
 WHERE DATE(o.order_date) BETWEEN current_date - INTERVAL '1 month' AND current_date)
-SELECT orders_data.names,COUNT(orders_data.quantity) FROM orders_data
+SELECT orders_data.names,SUM(orders_data.quantity) FROM orders_data
 GROUP BY orders_data.names
 ORDER BY orders_data.count DESC
 LIMIT 5
